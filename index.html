@@ -42,7 +42,7 @@ main{padding:25px}.hidden{display:none!important}.date{max-width:650px;margin:12
 <div><label>Materials</label><select name="materials"><option>Teacher signup</option></select></div><div class="full"><label>What should the student work on?</label><textarea name="helpDetails" required></textarea></div><div class="full"><button class="action" type="submit">Add Student</button></div></form><div id="teacherMsg" class="message"></div></div>
 <div class="panel"><h2>iStudy Roster</h2><div class="filters"><div><label>Subject</label><select id="filterSubject" onchange="renderRoster()"></select></div><div><label>Status</label><select id="filterStatus" onchange="renderRoster()"><option value="">All statuses</option><option>Signed Up</option><option>Waitlist</option><option>Attended</option><option>Completed</option><option>No Show</option><option>Cancelled</option></select></div></div><div class="tableWrap"><table><thead><tr><th>Student</th><th>Email</th><th>Grade</th><th>Subject</th><th>Teacher</th><th>Need</th><th>Signed Up By</th><th>Status</th><th>Notes</th><th>Save</th></tr></thead><tbody id="roster"></tbody></table></div></div>
 </div></section>
-</main><div class="footer">Be Responsible. Be Respectful. Be a Leader.</div></div>
+</main><div class="footer">Be Responsible. Be Respectful. Be a Leader. <span style="font-size:12px;font-weight:normal">• iStudy v5</span></div></div>
 <script>
 const API="https://script.google.com/macros/s/AKfycbx8-Aely-bd0A_Hncp2eiM8rCy-MVWJ5KceF5PwqcHvtuxbNMqfA9vIL1offdrx0aubrg/exec";let data=null,teacherData=null,code="";
 const icons={Science:"🔬",ELA:"📖",Math:"🧮","Social Studies":"🌎"};
@@ -87,11 +87,62 @@ function fillTeacherTeachers(){
   teacherClassTeacher.innerHTML=teacherOpts(teacherSubject.value);
 }
 function choose(sub){studentPanel.classList.remove("hidden");studentSubject.value=sub;fillStudentTeachers();studentTitle.textContent=sub+" iStudy Sign Up";studentPanel.scrollIntoView({behavior:"smooth"})}
-studentForm.addEventListener("submit",async e=>{e.preventDefault();try{const r=await jp({action:"signup",...Object.fromEntries(new FormData(e.target))});if(!r.ok)throw new Error(r.error);msg("studentMsg",r.data.message);e.target.reset();studentTeacher.innerHTML='<option value="">Choose teacher</option>';await load()}catch(x){msg("studentMsg",x.message,false)}});
+studentForm.addEventListener("submit",async e=>{
+  e.preventDefault();
+  const f=new FormData(e.target);
+  const payload={
+    action:"signup",
+    studentName:String(f.get("studentName")||"").trim(),
+    studentEmail:String(f.get("studentEmail")||"").trim(),
+    grade:String(f.get("grade")||""),
+    subject:String(f.get("subject")||""),
+    teacher:String(f.get("teacher")||""),
+    helpType:String(f.get("helpType")||""),
+    helpDetails:String(f.get("helpDetails")||"").trim(),
+    materials:String(f.get("materials")||"")
+  };
+  try{
+    const r=await jp(payload);
+    if(!r.ok)throw new Error(r.error);
+    msg("studentMsg",r.data.message+(r.data.emailStatus?" Email: "+r.data.emailStatus:""));
+    e.target.reset();
+    studentTeacher.innerHTML='<option value="">Choose teacher</option>';
+    await load();
+  }catch(x){
+    msg("studentMsg",x.message,false);
+  }
+});
 async function loginTeacher(){code=teacherCode.value.trim();try{const r=await jp({action:"teacherDashboard",code});if(!r.ok)throw new Error(r.error);teacherData=r.data;teacherLogin.classList.add("hidden");teacherArea.style.display="block";nextDate.value=r.data.nextDate;renderTeacher()}catch(x){msg("teacherLoginMsg",x.message,false)}}
 function renderTeacher(){summary.innerHTML=teacherData.summary.subjects.map(s=>`<div class="sum"><b>${esc(s.subject)}</b><div class="n">${s.registered} / ${s.capacity}</div><div>${s.spotsRemaining} spots left</div></div>`).join("");renderRoster()}
 async function saveDate(){try{const r=await jp({action:"saveNextDate",code,nextDate:nextDate.value});if(!r.ok)throw new Error(r.error);msg("dateMsg",r.data.message+" "+r.data.displayDate);await load();await refreshTeacher()}catch(x){msg("dateMsg",x.message,false)}}
-teacherForm.addEventListener("submit",async e=>{e.preventDefault();try{const r=await jp({action:"teacherSignup",code,...Object.fromEntries(new FormData(e.target))});if(!r.ok)throw new Error(r.error);msg("teacherMsg",r.data.message);e.target.reset();teacherClassTeacher.innerHTML='<option value="">Choose teacher</option>';await load();await refreshTeacher()}catch(x){msg("teacherMsg",x.message,false)}});
+teacherForm.addEventListener("submit",async e=>{
+  e.preventDefault();
+  const f=new FormData(e.target);
+  const payload={
+    action:"teacherSignup",
+    code:code,
+    studentName:String(f.get("studentName")||"").trim(),
+    studentEmail:String(f.get("studentEmail")||"").trim(),
+    grade:String(f.get("grade")||""),
+    subject:String(f.get("subject")||""),
+    teacher:String(f.get("teacher")||""),
+    signedUpBy:String(f.get("signedUpBy")||"").trim(),
+    helpType:String(f.get("helpType")||""),
+    helpDetails:String(f.get("helpDetails")||"").trim(),
+    materials:String(f.get("materials")||"")
+  };
+  try{
+    const r=await jp(payload);
+    if(!r.ok)throw new Error(r.error);
+    msg("teacherMsg",r.data.message+(r.data.emailStatus?" Email: "+r.data.emailStatus:""));
+    e.target.reset();
+    teacherClassTeacher.innerHTML='<option value="">Choose teacher</option>';
+    await load();
+    await refreshTeacher();
+  }catch(x){
+    msg("teacherMsg",x.message,false);
+  }
+});
 function renderRoster(){const sub=filterSubject.value,st=filterStatus.value,rows=teacherData.rows.filter(r=>(!sub||r.subject===sub)&&(!st||r.status===st));roster.innerHTML=rows.map(r=>`<tr><td><b>${esc(r.studentName)}</b></td><td>${esc(r.studentEmail)}</td><td>${esc(r.grade)}</td><td>${esc(r.subject)}</td><td>${esc(r.teacher)}</td><td>${esc(r.helpType)}<br><small>${esc(r.helpDetails)}</small></td><td>${esc(r.signedUpBy)}</td><td><select id="s${r.row}">${["Signed Up","Waitlist","Attended","Completed","No Show","Cancelled"].map(x=>`<option ${x===r.status?"selected":""}>${x}</option>`).join("")}</select></td><td><input id="n${r.row}" value="${esc(r.notes)}"></td><td><button class="action" onclick="saveRow(${r.row})">Save</button></td></tr>`).join("")}
 async function saveRow(row){try{const r=await jp({action:"updateStatus",code,row,status:document.getElementById("s"+row).value,notes:document.getElementById("n"+row).value});if(!r.ok)throw new Error(r.error);await load();await refreshTeacher()}catch(x){alert(x.message)}}
 async function refreshTeacher(){const r=await jp({action:"teacherDashboard",code});if(!r.ok)throw new Error(r.error);teacherData=r.data;nextDate.value=r.data.nextDate;renderTeacher()}
