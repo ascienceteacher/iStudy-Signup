@@ -46,14 +46,46 @@ main{padding:25px}.hidden{display:none!important}.date{max-width:650px;margin:12
 <script>
 const API="https://script.google.com/macros/s/AKfycbx8-Aely-bd0A_Hncp2eiM8rCy-MVWJ5KceF5PwqcHvtuxbNMqfA9vIL1offdrx0aubrg/exec";let data=null,teacherData=null,code="";
 const icons={Science:"🔬",ELA:"📖",Math:"🧮","Social Studies":"🌎"};
+
+const FALLBACK_TEACHERS={
+  "Science":["Marchand","Zuppinger","Stasny","Chlebina","Plummer","Henderson"],
+  "Math":["Lungmus","Shedrow","Ramaindo","Oliva","Jessup","Godfrey"],
+  "ELA":["Josey","Powers","Horst","Ogilbee","Benham","Almy"],
+  "Social Studies":["Reyes","Bosmeny","Kutz","Oliva","Richter","Morelli"]
+};
 function jp(p){return new Promise((res,rej)=>{const cb="cb"+Date.now()+Math.floor(Math.random()*99999),s=document.createElement("script");window[cb]=d=>{delete window[cb];s.remove();res(d)};s.onerror=()=>{delete window[cb];s.remove();rej(new Error("Could not connect to Google Sheet."))};s.src=API+"?"+new URLSearchParams({...p,callback:cb});document.body.appendChild(s)})}
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 function msg(id,t,ok=true){const e=document.getElementById(id);e.textContent=t;e.style.display="block";e.style.background=ok?"#efffe7":"#fff0ef"}
 function goHome(){home.classList.remove("hidden");studentView.classList.add("hidden");teacherView.classList.add("hidden")}function openStudent(){home.classList.add("hidden");studentView.classList.remove("hidden")}function openTeacher(){home.classList.add("hidden");teacherView.classList.remove("hidden")}
 async function load(){const r=await jp({action:"studentData"});if(!r.ok)throw new Error(r.error);data=r.data;homeDate.textContent="Next iStudy: "+data.displayDate;studentDate.textContent="Next iStudy: "+data.displayDate;renderCards();menus()}
 function renderCards(){cards.innerHTML=data.subjects.map(s=>`<div class="card"><div class="iconTop">${icons[s.subject]||"📚"}</div><div class="name">${esc(s.subject).toUpperCase()}</div><div class="cardBody"><div class="count">${s.registered} / ${s.capacity}</div><div>${s.isFull?"FULL — Waitlist":s.spotsRemaining+" spots left"}</div><button class="sign" onclick='choose(${JSON.stringify(s.subject)})'>${s.isFull?"Join Waitlist":"Sign Up"}</button></div></div>`).join("")}
-function menus(){const a=data.subjects.map(s=>s.subject),opts='<option value="">Choose subject</option>'+a.map(x=>`<option>${esc(x)}</option>`).join("");studentSubject.innerHTML=opts;teacherSubject.innerHTML=opts;filterSubject.innerHTML='<option value="">All subjects</option>'+a.map(x=>`<option>${esc(x)}</option>`).join("")}
-function teacherOpts(sub){return '<option value="">Choose teacher</option>'+((data.teachersBySubject||{})[sub]||[]).map(t=>`<option>${esc(t)}</option>`).join("")}function fillStudentTeachers(){studentTeacher.innerHTML=teacherOpts(studentSubject.value)}function fillTeacherTeachers(){teacherClassTeacher.innerHTML=teacherOpts(teacherSubject.value)}
+function menus(){
+  const a=data.subjects.map(s=>s.subject);
+  const opts='<option value="">Choose subject</option>'+
+    a.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("");
+  studentSubject.innerHTML=opts;
+  teacherSubject.innerHTML=opts;
+  filterSubject.innerHTML='<option value="">All subjects</option>'+
+    a.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("");
+  studentTeacher.innerHTML='<option value="">Choose teacher</option>';
+  teacherClassTeacher.innerHTML='<option value="">Choose teacher</option>';
+}
+function getTeachersForSubject(sub){
+  const apiMap=(data&&data.teachersBySubject)||{};
+  const apiList=Array.isArray(apiMap[sub])?apiMap[sub]:[];
+  return apiList.length ? apiList : (FALLBACK_TEACHERS[sub]||[]);
+}
+function teacherOpts(sub){
+  const list=getTeachersForSubject(sub);
+  return '<option value="">Choose teacher</option>'+
+    list.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join("");
+}
+function fillStudentTeachers(){
+  studentTeacher.innerHTML=teacherOpts(studentSubject.value);
+}
+function fillTeacherTeachers(){
+  teacherClassTeacher.innerHTML=teacherOpts(teacherSubject.value);
+}
 function choose(sub){studentPanel.classList.remove("hidden");studentSubject.value=sub;fillStudentTeachers();studentTitle.textContent=sub+" iStudy Sign Up";studentPanel.scrollIntoView({behavior:"smooth"})}
 studentForm.addEventListener("submit",async e=>{e.preventDefault();try{const r=await jp({action:"signup",...Object.fromEntries(new FormData(e.target))});if(!r.ok)throw new Error(r.error);msg("studentMsg",r.data.message);e.target.reset();studentTeacher.innerHTML='<option value="">Choose teacher</option>';await load()}catch(x){msg("studentMsg",x.message,false)}});
 async function loginTeacher(){code=teacherCode.value.trim();try{const r=await jp({action:"teacherDashboard",code});if(!r.ok)throw new Error(r.error);teacherData=r.data;teacherLogin.classList.add("hidden");teacherArea.style.display="block";nextDate.value=r.data.nextDate;renderTeacher()}catch(x){msg("teacherLoginMsg",x.message,false)}}
