@@ -42,7 +42,7 @@ main{padding:25px}.hidden{display:none!important}.date{max-width:650px;margin:12
 <div><label>Materials</label><select name="materials"><option>Teacher signup</option></select></div><div class="full"><label>What should the student work on?</label><textarea name="helpDetails" required></textarea></div><div class="full"><button class="action" type="submit">Add Student</button></div></form><div id="teacherMsg" class="message"></div></div>
 <div class="panel"><h2>iStudy Roster</h2><div class="filters"><div><label>Subject</label><select id="filterSubject" onchange="renderRoster()"></select></div><div><label>Status</label><select id="filterStatus" onchange="renderRoster()"><option value="">All statuses</option><option>Signed Up</option><option>Waitlist</option><option>Attended</option><option>Completed</option><option>No Show</option><option>Cancelled</option></select></div></div><div class="tableWrap"><table><thead><tr><th>Student</th><th>Email</th><th>Grade</th><th>Subject</th><th>Teacher</th><th>Need</th><th>Signed Up By</th><th>Status</th><th>Notes</th><th>Save</th></tr></thead><tbody id="roster"></tbody></table></div></div>
 </div></section>
-</main><div class="footer">Be Responsible. Be Respectful. Be a Leader. <span style="font-size:12px;font-weight:normal">• iStudy v5</span></div></div>
+</main><div class="footer">Be Responsible. Be Respectful. Be a Leader. <span style="font-size:12px;font-weight:normal">• iStudy v7 Mobile Fix</span></div></div>
 <script>
 const API="https://script.google.com/a/macros/rowlettmiddleacademy.org/s/AKfycbwIvKTq5t72o5cfxRttP17Lijt1JSex2wid9hp2INQHHI8QQS6fpBHgCvs2qsCJD_qy0Q/exec";let data=null,teacherData=null,code="";
 const icons={Science:"🔬",ELA:"📖",Math:"🧮","Social Studies":"🌎"};
@@ -53,7 +53,19 @@ const FALLBACK_TEACHERS={
   "ELA":["Josey","Powers","Horst","Ogilbee","Benham","Almy"],
   "Social Studies":["Reyes","Bosmeny","Kutz","Oliva","Richter","Morelli"]
 };
-function jp(p){return new Promise((res,rej)=>{const cb="cb"+Date.now()+Math.floor(Math.random()*99999),s=document.createElement("script");window[cb]=d=>{delete window[cb];s.remove();res(d)};s.onerror=()=>{delete window[cb];s.remove();rej(new Error("Could not connect to Google Sheet."))};s.src=API+"?"+new URLSearchParams({...p,callback:cb});document.body.appendChild(s)})}
+function buildQuery(obj){return Object.keys(obj).map(function(k){return encodeURIComponent(k)+"="+encodeURIComponent(obj[k]==null?"":String(obj[k]));}).join("&");}
+function jpOnce(p){return new Promise(function(res,rej){
+  var cb="istudy_cb_"+Date.now()+"_"+Math.floor(Math.random()*99999);
+  var s=document.createElement("script");
+  var done=false;
+  var timer=setTimeout(function(){cleanup();rej(new Error("The iStudy connection timed out. Please tap Try Again."));},12000);
+  function cleanup(){if(done)return;done=true;clearTimeout(timer);try{delete window[cb];}catch(e){window[cb]=undefined;}if(s.parentNode)s.parentNode.removeChild(s);}
+  window[cb]=function(d){cleanup();res(d);};
+  s.onerror=function(){cleanup();rej(new Error("Could not connect to the iStudy sheet."));};
+  var q={};Object.keys(p||{}).forEach(function(k){q[k]=p[k];});q.callback=cb;q._ts=Date.now();
+  s.src=API+"?"+buildQuery(q);s.async=true;document.head.appendChild(s);
+});}
+async function jp(p){try{return await jpOnce(p);}catch(e){await new Promise(function(r){setTimeout(r,700);});return await jpOnce(p);}}
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 function msg(id,t,ok=true){const e=document.getElementById(id);e.textContent=t;e.style.display="block";e.style.background=ok?"#efffe7":"#fff0ef"}
 function goHome(){home.classList.remove("hidden");studentView.classList.add("hidden");teacherView.classList.add("hidden")}function openStudent(){home.classList.add("hidden");studentView.classList.remove("hidden")}function openTeacher(){home.classList.add("hidden");teacherView.classList.remove("hidden")}
