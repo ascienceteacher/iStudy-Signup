@@ -42,42 +42,20 @@ main{padding:25px}.hidden{display:none!important}.date{max-width:650px;margin:12
 <div><label>Materials</label><select name="materials"><option>Teacher signup</option></select></div><div class="full"><label>What should the student work on?</label><textarea name="helpDetails" required></textarea></div><div class="full"><button class="action" type="submit">Add Student</button></div></form><div id="teacherMsg" class="message"></div></div>
 <div class="panel"><h2>iStudy Roster</h2><div class="filters"><div><label>Subject</label><select id="filterSubject" onchange="renderRoster()"></select></div><div><label>Status</label><select id="filterStatus" onchange="renderRoster()"><option value="">All statuses</option><option>Signed Up</option><option>Waitlist</option><option>Attended</option><option>Completed</option><option>No Show</option><option>Cancelled</option></select></div></div><div class="tableWrap"><table><thead><tr><th>Student</th><th>Email</th><th>Grade</th><th>Subject</th><th>Teacher</th><th>Need</th><th>Signed Up By</th><th>Status</th><th>Notes</th><th>Save</th></tr></thead><tbody id="roster"></tbody></table></div></div>
 </div></section>
-</main><div class="footer">Be Responsible. Be Respectful. Be a Leader. <span style="font-size:12px;font-weight:normal">• iStudy v9 Mobile Fix</span></div></div>
+</main><div class="footer">Be Responsible. Be Respectful. Be a Leader. <span style="font-size:12px;font-weight:normal">• iStudy v5</span></div></div>
 <script>
-var API="https://script.google.com/macros/s/AKfycbwIvKTq5t72o5cfxRttP17Lijt1JSex2wid9hp2INQHHI8QQS6fpBHgCvs2qsCJD_qy0Q/exec";var data=null,teacherData=null,code="";
-var icons={Science:"🔬",ELA:"📖",Math:"🧮","Social Studies":"🌎"};
+const API="https://script.google.com/a/macros/rowlettmiddleacademy.org/s/AKfycbwIvKTq5t72o5cfxRttP17Lijt1JSex2wid9hp2INQHHI8QQS6fpBHgCvs2qsCJD_qy0Q/exec";let data=null,teacherData=null,code="";
+const icons={Science:"🔬",ELA:"📖",Math:"🧮","Social Studies":"🌎"};
 
-var FALLBACK_TEACHERS={
+const FALLBACK_TEACHERS={
   "Science":["Marchand","Zuppinger","Stasny","Chlebina","Plummer","Henderson"],
   "Math":["Lungmus","Shedrow","Ramaindo","Oliva","Jessup","Godfrey"],
   "ELA":["Josey","Powers","Horst","Ogilbee","Benham","Almy"],
   "Social Studies":["Reyes","Bosmeny","Kutz","Oliva","Richter","Morelli"]
 };
-
-function E(id){return document.getElementById(id);}
-var home=E("home"),studentView=E("studentView"),teacherView=E("teacherView"),
-homeDate=E("homeDate"),studentDate=E("studentDate"),cards=E("cards"),
-studentPanel=E("studentPanel"),studentSubject=E("studentSubject"),studentTeacher=E("studentTeacher"),
-studentTitle=E("studentTitle"),studentForm=E("studentForm"),teacherCode=E("teacherCode"),
-teacherLogin=E("teacherLogin"),teacherArea=E("teacherArea"),nextDate=E("nextDate"),
-summary=E("summary"),teacherForm=E("teacherForm"),teacherSubject=E("teacherSubject"),
-teacherClassTeacher=E("teacherClassTeacher"),filterSubject=E("filterSubject"),
-filterStatus=E("filterStatus"),roster=E("roster");
-function buildQuery(obj){return Object.keys(obj).map(function(k){return encodeURIComponent(k)+"="+encodeURIComponent(obj[k]==null?"":String(obj[k]));}).join("&");}
-function jpOnce(p){return new Promise(function(res,rej){
-  var cb="istudy_cb_"+Date.now()+"_"+Math.floor(Math.random()*99999);
-  var s=document.createElement("script");
-  var done=false;
-  var timer=setTimeout(function(){cleanup();rej(new Error("The iStudy connection timed out. Please tap Try Again."));},12000);
-  function cleanup(){if(done)return;done=true;clearTimeout(timer);try{delete window[cb];}catch(e){window[cb]=undefined;}if(s.parentNode)s.parentNode.removeChild(s);}
-  window[cb]=function(d){cleanup();res(d);};
-  s.onerror=function(){cleanup();rej(new Error("Could not connect to the iStudy sheet."));};
-  var q={};Object.keys(p||{}).forEach(function(k){q[k]=p[k];});q.callback=cb;q._ts=Date.now();
-  s.src=API+"?"+buildQuery(q);s.async=true;document.head.appendChild(s);
-});}
-async function jp(p){try{return await jpOnce(p);}catch(e){await new Promise(function(r){setTimeout(r,700);});return await jpOnce(p);}}
-function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
-function msg(id,t,ok){const e=document.getElementById(id);e.textContent=t;e.style.display="block";e.style.background=(ok===false)?"#fff0ef":"#efffe7"}
+function jp(p){return new Promise((res,rej)=>{const cb="cb"+Date.now()+Math.floor(Math.random()*99999),s=document.createElement("script");window[cb]=d=>{delete window[cb];s.remove();res(d)};s.onerror=()=>{delete window[cb];s.remove();rej(new Error("Could not connect to Google Sheet."))};s.src=API+"?"+new URLSearchParams({...p,callback:cb});document.body.appendChild(s)})}
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
+function msg(id,t,ok=true){const e=document.getElementById(id);e.textContent=t;e.style.display="block";e.style.background=ok?"#efffe7":"#fff0ef"}
 function goHome(){home.classList.remove("hidden");studentView.classList.add("hidden");teacherView.classList.add("hidden")}function openStudent(){home.classList.add("hidden");studentView.classList.remove("hidden")}function openTeacher(){home.classList.add("hidden");teacherView.classList.remove("hidden")}
 async function load(){const r=await jp({action:"studentData"});if(!r.ok)throw new Error(r.error);data=r.data;homeDate.textContent="Next iStudy: "+data.displayDate;studentDate.textContent="Next iStudy: "+data.displayDate;renderCards();menus()}
 function renderCards(){cards.innerHTML=data.subjects.map(s=>`<div class="card"><div class="iconTop">${icons[s.subject]||"📚"}</div><div class="name">${esc(s.subject).toUpperCase()}</div><div class="cardBody"><div class="count">${s.registered} / ${s.capacity}</div><div>${s.isFull?"FULL — Waitlist":s.spotsRemaining+" spots left"}</div><button class="sign" onclick='choose(${JSON.stringify(s.subject)})'>${s.isFull?"Join Waitlist":"Sign Up"}</button></div></div>`).join("")}
@@ -126,7 +104,7 @@ studentForm.addEventListener("submit",async e=>{
   try{
     const r=await jp(payload);
     if(!r.ok)throw new Error(r.error);
-    msg("studentMsg",r.data.message+(r.data.emailStatus?" Email: "+r.data.emailStatus:""),true);
+    msg("studentMsg",r.data.message+(r.data.emailStatus?" Email: "+r.data.emailStatus:""));
     e.target.reset();
     studentTeacher.innerHTML='<option value="">Choose teacher</option>';
     await load();
@@ -136,7 +114,7 @@ studentForm.addEventListener("submit",async e=>{
 });
 async function loginTeacher(){code=teacherCode.value.trim();try{const r=await jp({action:"teacherDashboard",code});if(!r.ok)throw new Error(r.error);teacherData=r.data;teacherLogin.classList.add("hidden");teacherArea.style.display="block";nextDate.value=r.data.nextDate;renderTeacher()}catch(x){msg("teacherLoginMsg",x.message,false)}}
 function renderTeacher(){summary.innerHTML=teacherData.summary.subjects.map(s=>`<div class="sum"><b>${esc(s.subject)}</b><div class="n">${s.registered} / ${s.capacity}</div><div>${s.spotsRemaining} spots left</div></div>`).join("");renderRoster()}
-async function saveDate(){try{const r=await jp({action:"saveNextDate",code,nextDate:nextDate.value});if(!r.ok)throw new Error(r.error);msg("dateMsg",r.data.message+" "+r.data.displayDate,true);await load();await refreshTeacher()}catch(x){msg("dateMsg",x.message,false)}}
+async function saveDate(){try{const r=await jp({action:"saveNextDate",code,nextDate:nextDate.value});if(!r.ok)throw new Error(r.error);msg("dateMsg",r.data.message+" "+r.data.displayDate);await load();await refreshTeacher()}catch(x){msg("dateMsg",x.message,false)}}
 teacherForm.addEventListener("submit",async e=>{
   e.preventDefault();
   const f=new FormData(e.target);
@@ -156,7 +134,7 @@ teacherForm.addEventListener("submit",async e=>{
   try{
     const r=await jp(payload);
     if(!r.ok)throw new Error(r.error);
-    msg("teacherMsg",r.data.message+(r.data.emailStatus?" Email: "+r.data.emailStatus:""),true);
+    msg("teacherMsg",r.data.message+(r.data.emailStatus?" Email: "+r.data.emailStatus:""));
     e.target.reset();
     teacherClassTeacher.innerHTML='<option value="">Choose teacher</option>';
     await load();
@@ -168,5 +146,5 @@ teacherForm.addEventListener("submit",async e=>{
 function renderRoster(){const sub=filterSubject.value,st=filterStatus.value,rows=teacherData.rows.filter(r=>(!sub||r.subject===sub)&&(!st||r.status===st));roster.innerHTML=rows.map(r=>`<tr><td><b>${esc(r.studentName)}</b></td><td>${esc(r.studentEmail)}</td><td>${esc(r.grade)}</td><td>${esc(r.subject)}</td><td>${esc(r.teacher)}</td><td>${esc(r.helpType)}<br><small>${esc(r.helpDetails)}</small></td><td>${esc(r.signedUpBy)}</td><td><select id="s${r.row}">${["Signed Up","Waitlist","Attended","Completed","No Show","Cancelled"].map(x=>`<option ${x===r.status?"selected":""}>${x}</option>`).join("")}</select></td><td><input id="n${r.row}" value="${esc(r.notes)}"></td><td><button class="action" onclick="saveRow(${r.row})">Save</button></td></tr>`).join("")}
 async function saveRow(row){try{const r=await jp({action:"updateStatus",code,row,status:document.getElementById("s"+row).value,notes:document.getElementById("n"+row).value});if(!r.ok)throw new Error(r.error);await load();await refreshTeacher()}catch(x){alert(x.message)}}
 async function refreshTeacher(){const r=await jp({action:"teacherDashboard",code});if(!r.ok)throw new Error(r.error);teacherData=r.data;nextDate.value=r.data.nextDate;renderTeacher()}
-load().catch(function(e){homeDate.textContent="Could not load iStudy information. Tap here to retry.";homeDate.onclick=function(){location.reload();};if(window.console&&console.error)console.error(e);})
+load().catch(e=>{homeDate.textContent="Could not load iStudy information.";console.error(e)})
 </script></body></html>
