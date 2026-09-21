@@ -42,9 +42,9 @@ main{padding:25px}.hidden{display:none!important}.date{max-width:650px;margin:12
 <div><label>Materials</label><select name="materials"><option>Teacher signup</option></select></div><div class="full"><label>What should the student work on?</label><textarea name="helpDetails" required></textarea></div><div class="full"><button class="action" type="submit">Add Student</button></div></form><div id="teacherMsg" class="message"></div></div>
 <div class="panel"><h2>iStudy Roster</h2><div class="filters"><div><label>Subject</label><select id="filterSubject" onchange="renderRoster()"></select></div><div><label>Status</label><select id="filterStatus" onchange="renderRoster()"><option value="">All statuses</option><option>Signed Up</option><option>Waitlist</option><option>Attended</option><option>Completed</option><option>No Show</option><option>Cancelled</option></select></div></div><div class="tableWrap"><table><thead><tr><th>Student</th><th>Email</th><th>Grade</th><th>Subject</th><th>Teacher</th><th>Need</th><th>Signed Up By</th><th>Status</th><th>Notes</th><th>Save</th></tr></thead><tbody id="roster"></tbody></table></div></div>
 </div></section>
-</main><div class="footer">Be Responsible. Be Respectful. Be a Leader. <span style="font-size:12px;font-weight:normal">• iStudy Gold Mobile 5.2</span></div></div>
+</main><div class="footer">Be Responsible. Be Respectful. Be a Leader. <span style="font-size:12px;font-weight:normal">• iStudy Emergency Mobile 5.3</span></div></div>
 <script>
-const API="https://script.google.com/macros/s/AKfycbwIvKTq5t72o5cfxRttP17Lijt1JSex2wid9hp2INQHHI8QQS6fpBHgCvs2qsCJD_qy0Q/exec";let data=null,teacherData=null,code="";
+const API="https://script.google.com/a/macros/rowlettmiddleacademy.org/s/AKfycbwIvKTq5t72o5cfxRttP17Lijt1JSex2wid9hp2INQHHI8QQS6fpBHgCvs2qsCJD_qy0Q/exec";let data=null,teacherData=null,code="";
 const icons={Science:"🔬",ELA:"📖",Math:"🧮","Social Studies":"🌎"};
 
 const FALLBACK_TEACHERS={
@@ -113,31 +113,7 @@ function fillTeacherTeachers(){
   teacherClassTeacher.innerHTML=teacherOpts(teacherSubject.value);
 }
 function choose(sub){studentPanel.classList.remove("hidden");studentSubject.value=sub;fillStudentTeachers();studentTitle.textContent=sub+" iStudy Sign Up";studentPanel.scrollIntoView({behavior:"smooth"})}
-studentForm.addEventListener("submit",async e=>{
-  e.preventDefault();
-  const f=new FormData(e.target);
-  const payload={
-    action:"signup",
-    studentName:String(f.get("studentName")||"").trim(),
-    studentEmail:String(f.get("studentEmail")||"").trim(),
-    grade:String(f.get("grade")||""),
-    subject:String(f.get("subject")||""),
-    teacher:String(f.get("teacher")||""),
-    helpType:String(f.get("helpType")||""),
-    helpDetails:String(f.get("helpDetails")||"").trim(),
-    materials:String(f.get("materials")||"")
-  };
-  try{
-    const r=await jp(payload);
-    if(!r.ok)throw new Error(r.error);
-    msg("studentMsg",r.data.message+(r.data.emailStatus?" Email: "+r.data.emailStatus:""));
-    e.target.reset();
-    studentTeacher.innerHTML='<option value="">Choose teacher</option>';
-    await load();
-  }catch(x){
-    msg("studentMsg",x.message,false);
-  }
-});
+studentForm.addEventListener("submit",function(e){e.preventDefault();mobileSafeStudentSubmit(e.target);});
 async function loginTeacher(){code=teacherCode.value.trim();try{const r=await jp({action:"teacherDashboard",code});if(!r.ok)throw new Error(r.error);teacherData=r.data;teacherLogin.classList.add("hidden");teacherArea.style.display="block";nextDate.value=r.data.nextDate;renderTeacher()}catch(x){msg("teacherLoginMsg",x.message,false)}}
 function renderTeacher(){summary.innerHTML=teacherData.summary.subjects.map(s=>`<div class="sum"><b>${esc(s.subject)}</b><div class="n">${s.registered} / ${s.capacity}</div><div>${s.spotsRemaining} spots left</div></div>`).join("");renderRoster()}
 async function saveDate(){try{const r=await jp({action:"saveNextDate",code,nextDate:nextDate.value});if(!r.ok)throw new Error(r.error);msg("dateMsg",r.data.message+" "+r.data.displayDate);await load();await refreshTeacher()}catch(x){msg("dateMsg",x.message,false)}}
@@ -172,5 +148,22 @@ teacherForm.addEventListener("submit",async e=>{
 function renderRoster(){const sub=filterSubject.value,st=filterStatus.value,rows=teacherData.rows.filter(r=>(!sub||r.subject===sub)&&(!st||r.status===st));roster.innerHTML=rows.map(r=>`<tr><td><b>${esc(r.studentName)}</b></td><td>${esc(r.studentEmail)}</td><td>${esc(r.grade)}</td><td>${esc(r.subject)}</td><td>${esc(r.teacher)}</td><td>${esc(r.helpType)}<br><small>${esc(r.helpDetails)}</small></td><td>${esc(r.signedUpBy)}</td><td><select id="s${r.row}">${["Signed Up","Waitlist","Attended","Completed","No Show","Cancelled"].map(x=>`<option ${x===r.status?"selected":""}>${x}</option>`).join("")}</select></td><td><input id="n${r.row}" value="${esc(r.notes)}"></td><td><button class="action" onclick="saveRow(${r.row})">Save</button></td></tr>`).join("")}
 async function saveRow(row){try{const r=await jp({action:"updateStatus",code,row,status:document.getElementById("s"+row).value,notes:document.getElementById("n"+row).value});if(!r.ok)throw new Error(r.error);await load();await refreshTeacher()}catch(x){alert(x.message)}}
 async function refreshTeacher(){const r=await jp({action:"teacherDashboard",code});if(!r.ok)throw new Error(r.error);teacherData=r.data;nextDate.value=r.data.nextDate;renderTeacher()}
-load().catch(e=>{homeDate.textContent="Could not load iStudy information.";console.error(e)})
+
+function useMobileFallback(){
+ data={nextDate:"2026-09-22",displayDate:"Tuesday, September 22, 2026",shortDate:"Tue, Sep 22",capacityPerSubject:25,
+ subjects:[{subject:"Science",registered:1,capacity:25,spotsRemaining:24,isFull:false},{subject:"ELA",registered:0,capacity:25,spotsRemaining:25,isFull:false},{subject:"Math",registered:0,capacity:25,spotsRemaining:25,isFull:false},{subject:"Social Studies",registered:0,capacity:25,spotsRemaining:25,isFull:false}],
+ teachersBySubject:FALLBACK_TEACHERS};
+ homeDate.textContent="Next iStudy: "+data.displayDate;studentDate.textContent="Next iStudy: "+data.displayDate;renderCards();menus();
+}
+function mobileSafeStudentSubmit(form){
+ const f=new FormData(form);
+ const p={action:"signup",studentName:String(f.get("studentName")||"").trim(),studentEmail:String(f.get("studentEmail")||"").trim(),grade:String(f.get("grade")||""),subject:String(f.get("subject")||""),teacher:String(f.get("teacher")||""),helpType:String(f.get("helpType")||""),helpDetails:String(f.get("helpDetails")||"").trim(),materials:String(f.get("materials")||""),_ts:Date.now()};
+ let frame=document.getElementById("istudySubmitFrame");
+ if(!frame){frame=document.createElement("iframe");frame.id="istudySubmitFrame";frame.name="istudySubmitFrame";frame.style.display="none";document.body.appendChild(frame);}
+ frame.src=API+"?"+buildQuery(p);
+ msg("studentMsg","Your iStudy request was sent. Check your school email for the confirmation.");
+ setTimeout(()=>{form.reset();studentTeacher.innerHTML='<option value="">Choose teacher</option>';},500);
+}
+
+load().catch(e=>{console.error(e);useMobileFallback()})
 </script></body></html>
