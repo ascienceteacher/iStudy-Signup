@@ -42,9 +42,9 @@ main{padding:25px}.hidden{display:none!important}.date{max-width:650px;margin:12
 <div><label>Materials</label><select name="materials"><option>Teacher signup</option></select></div><div class="full"><label>What should the student work on?</label><textarea name="helpDetails" required></textarea></div><div class="full"><button class="action" type="submit">Add Student</button></div></form><div id="teacherMsg" class="message"></div></div>
 <div class="panel"><h2>iStudy Roster</h2><div class="filters"><div><label>Subject</label><select id="filterSubject" onchange="renderRoster()"></select></div><div><label>Status</label><select id="filterStatus" onchange="renderRoster()"><option value="">All statuses</option><option>Signed Up</option><option>Waitlist</option><option>Attended</option><option>Completed</option><option>No Show</option><option>Cancelled</option></select></div></div><div class="tableWrap"><table><thead><tr><th>Student</th><th>Email</th><th>Grade</th><th>Subject</th><th>Teacher</th><th>Need</th><th>Signed Up By</th><th>Status</th><th>Notes</th><th>Save</th></tr></thead><tbody id="roster"></tbody></table></div></div>
 </div></section>
-</main><div class="footer">Be Responsible. Be Respectful. Be a Leader. <span style="font-size:12px;font-weight:normal">• iStudy Gold Mobile 5.1</span></div></div>
+</main><div class="footer">Be Responsible. Be Respectful. Be a Leader. <span style="font-size:12px;font-weight:normal">• iStudy Gold Mobile 5.2</span></div></div>
 <script>
-const API="https://script.google.com/a/macros/rowlettmiddleacademy.org/s/AKfycbwIvKTq5t72o5cfxRttP17Lijt1JSex2wid9hp2INQHHI8QQS6fpBHgCvs2qsCJD_qy0Q/exec";let data=null,teacherData=null,code="";
+const API="https://script.google.com/macros/s/AKfycbwIvKTq5t72o5cfxRttP17Lijt1JSex2wid9hp2INQHHI8QQS6fpBHgCvs2qsCJD_qy0Q/exec";let data=null,teacherData=null,code="";
 const icons={Science:"🔬",ELA:"📖",Math:"🧮","Social Studies":"🌎"};
 
 const FALLBACK_TEACHERS={
